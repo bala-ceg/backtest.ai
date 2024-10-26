@@ -1,1 +1,7 @@
 Flask==3.0.3
+yfinance
+pandas
+requests
+langchain
+langchain-openai
+urllib3
