@@ -1,239 +1,111 @@
+<!-- templates/index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Stock Analyzer</title>
-    <style>
-        :root {
-            --bg-color: #f0f2f5;
-            --chat-bg: #ffffff;
-            --text-color: #050505;
-            --secondary-text: #65676b;
-            --border-color: #dddfe2;
-            --primary-color: #0084ff;
-            --sent-message-bg: #0084ff;
-            --received-message-bg: #e4e6eb;
-            --sent-message-color: #ffffff;
-            --received-message-color: #050505;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        html, body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            line-height: 1.5;
-        }
-
-        .chat-container {
-            max-width: 100%;
-            height: 100vh;
-            margin: 0;
-            background-color: var(--chat-bg);
-            display: flex;
-            flex-direction: column;
-        }
-
-        .chat-header {
-            background-color: var(--primary-color);
-            color: white;
-            padding: 15px;
-            text-align: center;
-            font-size: 1.2em;
-            font-weight: bold;
-        }
-
-        .chat-messages {
-            flex-grow: 1;
-            overflow-y: auto;
-            padding: 15px;
-        }
-
-        .message {
-            margin-bottom: 15px;
-            max-width: 80%;
-            padding: 10px;
-            border-radius: 18px;
-        }
-
-        .user-message {
-            background-color: var(--sent-message-bg);
-            color: var(--sent-message-color);
-            align-self: flex-end;
-            margin-left: auto;
-        }
-
-        .ai-message {
-            background-color: var(--received-message-bg);
-            color: var(--received-message-color);
-        }
-
-        .chat-input {
-            display: flex;
-            padding: 15px;
-            border-top: 1px solid var(--border-color);
-        }
-
-        .chat-input input {
-            flex-grow: 1;
-            padding: 10px;
-            border: 1px solid var(--border-color);
-            border-radius: 20px;
-            font-size: 1em;
-        }
-
-        .chat-input button {
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            margin-left: 10px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 1em;
-        }
-
-        .chat-input button:hover {
-            background-color: #006edc;
-        }
-
-        .stock-result {
-            background-color: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 5px;
-            padding: 15px;
-            margin-top: 15px;
-        }
-
-        .stock-result h3 {
-            margin-bottom: 10px;
-            color: var(--primary-color);
-        }
-
-        .stock-result table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .stock-result th, .stock-result td {
-            border: 1px solid #dee2e6;
-            padding: 8px;
-            text-align: left;
-        }
-
-        .stock-result th {
-            background-color: #e9ecef;
-        }
-
-        @media (max-width: 600px) {
-            .chat-container {
-                margin: 10px;
-                border-radius: 0;
-            }
-
-            .message {
-                max-width: 90%;
-            }
-        }
-    </style>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
-<body>
-    <div class="chat-container">
-        <div class="chat-header">AI Stock Analyzer</div>
-        <div class="chat-messages" id="chatMessages">
-            <div class="message ai-message">
-                Hello! I'm your AI Stock Analyzer. You can ask me to analyze a stock's performance for specific corporate actions like Split, Buyback, or Bonus. For example, try "Analyze the WIPRO performance for Buyback Corporate Action".
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-3xl mx-auto bg-white rounded-lg shadow-lg">
+            <div class="p-4 border-b border-gray-200">
+                <h1 class="text-xl font-bold text-gray-800">AI Stock Analyzer</h1>
             </div>
-        </div>
-        <div class="chat-input">
-            <input type="text" id="userInput" placeholder="Type your query here..." aria-label="Type your query">
-            <button onclick="sendMessage()">Send</button>
+            
+            <div id="chatMessages" class="p-4 h-96 overflow-y-auto space-y-4">
+                <div class="bg-blue-100 p-3 rounded-lg">
+                    <p>Hello! I'm your AI Stock Analyzer. You can ask me to analyze a stock's performance for specific corporate actions like Split, Buyback, or Bonus. For example, try "Analyze the WIPRO performance for Buyback Corporate Action".</p>
+                </div>
+            </div>
+            
+            <div class="p-4 border-t border-gray-200">
+                <div class="flex space-x-2">
+                    <input type="text" id="userInput" 
+                           class="flex-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                           placeholder="Type your message...">
+                    <button onclick="sendMessage()" 
+                            class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none">
+                        Send
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
-        function sendMessage() {
-            const userInput = document.getElementById('userInput');
+        function appendMessage(message, isUser) {
             const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = isUser ? 
+                'bg-gray-100 p-3 rounded-lg ml-auto max-w-md' : 
+                'bg-blue-100 p-3 rounded-lg max-w-md';
+            
+            if (typeof message === 'object') {
+                // Create a table for the results
+                const table = document.createElement('table');
+                table.className = 'min-w-full divide-y divide-gray-200';
+                
+                // Create table header
+                const thead = document.createElement('thead');
+                const headerRow = document.createElement('tr');
+                const headers = ['Symbol', 'Announcement Date', 'Record Date', 'Record Return', '3m', '6m', '1y', '3y'];
+                
+                headers.forEach(header => {
+                    const th = document.createElement('th');
+                    th.className = 'px-2 py-1 text-xs font-medium text-gray-500 uppercase tracking-wider';
+                    th.textContent = header;
+                    headerRow.appendChild(th);
+                });
+                thead.appendChild(headerRow);
+                table.appendChild(thead);
+                
+                // Create table body
+                const tbody = document.createElement('tbody');
+                message.forEach(row => {
+                    const tr = document.createElement('tr');
+                    [
+                        row.symbol,
+                        row.announcement_date,
+                        row.record_date,
+                        row.record_date_return,
+                        row['3m'],
+                        row['6m'],
+                        row['1y'],
+                        row['3y']
+                    ].forEach(cell => {
+                        const td = document.createElement('td');
+                        td.className = 'px-2 py-1 text-xs';
+                        td.textContent = cell || 'N/A';
+                        tr.appendChild(td);
+                    });
+                    tbody.appendChild(tr);
+                });
+                table.appendChild(tbody);
+                messageDiv.appendChild(table);
+            } else {
+                messageDiv.textContent = message;
+            }
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
 
-            if (userInput.value.trim() === '') return;
-
-            // Add user message to chat
-            const userMessage = document.createElement('div');
-            userMessage.className = 'message user-message';
-            userMessage.textContent = userInput.value;
-            chatMessages.appendChild(userMessage);
-
-            // Clear input field
-            userInput.value = '';
-
-            // Simulate AI response (replace this with actual API call)
-            setTimeout(() => {
-                const aiMessage = document.createElement('div');
-                aiMessage.className = 'message ai-message';
-                aiMessage.innerHTML = 'Analyzing your request...';
-                chatMessages.appendChild(aiMessage);
-
-                // Simulated API call (replace with actual implementation)
+        function sendMessage() {
+            const input = document.getElementById('userInput');
+            const message = input.value.trim();
+            
+            if (message) {
+                appendMessage(message, true);
+                input.value = '';
+                
                 fetch('/analyze', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ query: userMessage.textContent }),
+                    body: JSON.stringify({ message: message }),
                 })
                 .then(response => response.json())
                 .then(data => {
-                    // Update AI message with results
-                    aiMessage.innerHTML = formatStockResult(data);
-                })
-                .catch(error => {
-                    aiMessage.textContent = 'Sorry, an error occurred while processing your request.';
-                    console.error('Error:', error);
-                });
-
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            }, 1000);
-        }
-
-        function formatStockResult(data) {
-            if (typeof data === 'string') {
-                return data; // Return the error message as is
-            }
-
-            let html = '<div class="stock-result">';
-            html += `<h3>${data.symbol} Analysis</h3>`;
-            html += '<table>';
-            html += '<tr><th>Metric</th><th>Value</th></tr>';
-            html += `<tr><td>Announcement Date</td><td>${data.announcement_date}</td></tr>`;
-            html += `<tr><td>Record Date</td><td>${data.record_date}</td></tr>`;
-            html += `<tr><td>Record Date Return</td><td>${data.record_date_return}</td></tr>`;
-            html += `<tr><td>3 Month Return</td><td>${data['3m']}</td></tr>`;
-            html += `<tr><td>6 Month Return</td><td>${data['6m']}</td></tr>`;
-            html += `<tr><td>1 Year Return</td><td>${data['1y']}</td></tr>`;
-            html += `<tr><td>3 Year Return</td><td>${data['3y']}</td></tr>`;
-            html += '</table></div>';
-            return html;
-        }
-
-        // Allow sending message with Enter key
-        document.getElementById('userInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                sendMessage();
-            }
-        });
-    </script>
-</body>
-</html>
