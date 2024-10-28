@@ -113,6 +113,9 @@ def gather_and_calculate_returns(user_input):
         op = json.loads(response.content)
         stock_symbol = op['Stock Name'].upper()
         corp_action = op['Corporate Action']
+        
+        if not stock_symbol.endswith(".NS"):
+            stock_symbol += ".NS
 
         if corp_action.upper() not in ['SPLIT', 'BONUS', 'BUYBACK']:
             return jsonify({"error": "Please provide only the corporate action of 'SPLIT', 'BONUS', or 'BUYBACK' to proceed"}), 400
