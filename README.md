@@ -1,28 +1,39 @@
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvercel%2Fexamples%2Ftree%2Fmain%2Fpython%2Fflask3&demo-title=Flask%203%20%2B%20Vercel&demo-description=Use%20Flask%203%20on%20Vercel%20with%20Serverless%20Functions%20using%20the%20Python%20Runtime.&demo-url=https%3A%2F%2Fflask3-python-template.vercel.app%2F&demo-image=https://assets.vercel.com/image/upload/v1669994156/random/flask.png)
+# StockGenie
 
-# Flask + Vercel
+## Inspiration
+Everyone loves money, and many seek to grow their wealth through capital markets, whether for short or long durations. However, identifying the right stock for short-term or long-term gains can be risky and cumbersome. In Peter Lynch's *One Up on Wall Street*, he emphasizes the importance of investing in companies that consistently buy back their shares. Inspired by this, I envisioned a tool that calculates the returns from buybacks, bonuses, and stock splits, providing long-term and short-term insights along with LLM-based reasoning for trade and investment ideas.
 
-This example shows how to use Flask 3 on Vercel with Serverless Functions using the [Python Runtime](https://vercel.com/docs/concepts/functions/serverless-functions/runtimes/python).
+Currently, this tool covers only the listed companies in India, but I have plans to expand its capabilities to encompass all capital markets in the future.
 
-## Demo
+## What It Does
+StockGenie provides insights into stock performance based on corporate actions such as buybacks, bonuses, and splits. It calculates returns over short and long-term periods and offers reasoning for investment decisions through natural language processing.
 
-https://flask-python-template.vercel.app/
+## How We Built It
+India's stock market corporate actions data is not readily available, so I developed a script that extracts corporate actions for a given company. This data is streamed to a Redpanda connector, producing messages that are written to a Supabase-hosted PostgreSQL database on the consumer side.
 
-## How it Works
+The Python application utilizes LLMs to identify stock tickers and corporate actions with appropriate handling. Once identified, it generates return data for both short and long-term time frames. This return data is then analyzed by the LLM to provide reasoning regarding the viability of specific trades based on corporate actions.
 
-This example uses the Web Server Gateway Interface (WSGI) with Flask to enable handling requests on Vercel with Serverless Functions.
+## Challenges We Ran Into
+- Lack of readily available corporate actions data for Indian stocks.
+- Implementing a robust data streaming solution with Redpanda.
+- Ensuring accurate identification and handling of stock tickers and corporate actions.
 
-## Running Locally
+## Accomplishments That We're Proud Of
+- Successfully integrated Redpanda for real-time data streaming.
+- Developed a functional tool that analyzes corporate actions and provides actionable insights.
+- Created a natural language backtesting platform that facilitates hypothesis testing for investment strategies.
 
-```bash
-npm i -g vercel
-vercel dev
-```
+## What We Learned
+I gained valuable experience in data streaming with Redpanda, which is crucial for managing stock market data. Additionally, I learned about building a natural language backtesting platform capable of testing corporate actions on specific companies.
 
-Your Flask application is now available at `http://localhost:3000`.
+## What's Next for StockGenie
+Future plans include expanding backtesting features across various areas of the capital markets, enhancing the tool's capabilities, and broadening its reach to more companies and markets globally.
 
-## One-Click Deploy
 
-Deploy the example using [Vercel](https://vercel.com?utm_source=github&utm_medium=readme&utm_campaign=vercel-examples):
+## Demo Screenshots
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvercel%2Fexamples%2Ftree%2Fmain%2Fpython%2Fflask3&demo-title=Flask%203%20%2B%20Vercel&demo-description=Use%20Flask%203%20on%20Vercel%20with%20Serverless%20Functions%20using%20the%20Python%20Runtime.&demo-url=https%3A%2F%2Fflask3-python-template.vercel.app%2F&demo-image=https://assets.vercel.com/image/upload/v1669994156/random/flask.png)
+<img width="1359" alt="Screenshot 2024-10-28 at 9 40 39 PM" src="https://github.com/user-attachments/assets/799c1e6f-84db-4e62-bdd7-b2a594697bf4">
+
+
+
+
