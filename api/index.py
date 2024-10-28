@@ -1,3 +1,6 @@
+llm = ChatOpenAI(api_key=os.getenv('API_KEY'),base_url=os.getenv('URL'))
+conn_string = f'user={os.environ.get("user")} password={os.environ.get("password")} host={os.environ.get("host")} port={os.environ.get("port")} dbname={os.environ.get("db")}'
+  
 from flask import Flask, render_template, request, jsonify
 from datetime import timedelta, datetime
 import yfinance as yf
@@ -13,7 +16,8 @@ import psycopg2
 
 app = Flask(__name__)
 
-template = """You are tasked with gathering information for a stock analysis. Please provide the following details:
+# Initialize LangChain components
+stockanalysis_template = """You are tasked with gathering information for a stock analysis. Please provide the following details:
 
 1. **Stock Name**:
 2. **Corporate Action** (only options: Split, Buyback, Bonus):
@@ -24,6 +28,71 @@ Current Input:
 {user_input}
 
 Return the Response in JSON Format"""
+
+rationales = {
+    "BUYBACK": "Buybacks signal that the company believes its shares are undervalued, which can boost investor confidence and demand, potentially leading to an increase in share price.",
+    "BONUS": "Issuing bonus shares increases the number of shares outstanding, which can make the stock more affordable and attractive to a broader range of investors, potentially boosting demand.",
+    "SPLIT": "Stock splits make shares more affordable for investors by reducing the price per share while maintaining the company's market capitalization, often leading to increased liquidity and demand."
+}
+
+
+
+stock_info_prompt = PromptTemplate.from_template(stockanalysis_template)
+
+llm = ChatOpenAI(
+    api_key='mdb_1P4vPquIeFC4M4isa8FbIvgavv2qaznt5LoNL4XSPzO9',
+    base_url='https://llm.mdb.ai'
+)
+conn_string ='user=postgres.tbyjdbudjrlxigaobinu password=8GK%S*G!qpfQa!y host=aws-0-ap-south-1.pooler.supabase.com port=6543 dbname=postgres'
+
+
+def generate_analysis_prompt(df_head: str, corporate_action: str) -> str:
+    """
+    Generates a prompt for analyzing the impact of a corporate action on stock performance.
+
+    Parameters:
+    - df_head (str): A string representation of the DataFrame head.
+    - corporate_action (str): The type of corporate action (Buyback, Bonus Shares, Split).
+
+    Returns:
+    - str: The formatted prompt for analysis.
+    """
+    # Prepare the rationale for the specified corporate action
+    rationale_text = rationales.get(corporate_action, "No rationale available.")
+
+    prompt = f"""
+    You are working with a Pandas DataFrame in Python named `df`. This DataFrame contains stock performance data following the corporate action: {corporate_action}. The columns include:
+    - `symbol`: The stock symbol
+    - `announcement_date`: The date the corporate action was announced
+    - `record_date`: The date the corporate action was recorded
+    - `record_date_return`: The return on the record date
+    - `3m`: The 3-month return after the corporate action
+    - `6m`: The 6-month return after the corporate action
+    - `1y`: The 1-year return after the corporate action
+    - `3y`: The 3-year return after the corporate action
+
+    This is the result of `print(df.head())`:
+
+        {df_head}
+
+    **Hypothesis:** Corporate actions such as Buybacks, Bonuses, and Splits tend to increase the share price in both the short term and long term.
+
+    **Rationale for Corporate Action:**
+    - **{corporate_action}:** {rationale_text}
+
+    **Analysis Instructions:**
+    1. **Explain the rationale and significance of the corporate action.**
+    2. **Analyze the impact of this corporate action on the stock's performance, ignoring any `NaN` values.**
+       - Discuss trends or patterns observed in the returns over different time periods (3 months, 6 months, 1 year, and 3 years).
+       - Address the following:
+         - Has this corporate action had a positive or negative impact on returns across these periods?
+         - Is there a trend of increasing or decreasing returns over time?
+         - Are there any notable insights on how this corporate action might influence long-term stock performance?
+
+    **Conclusion:** Based on your analysis, state whether you support or refute the hypothesis regarding the impact of this corporate action on share prices in the short and long term.
+    """
+    
+    return prompt.strip()
 
 
 
@@ -103,20 +172,20 @@ def calculate_returns(df):
 def gather_and_calculate_returns(user_input):
     print(user_input)
     try:
-        stock_info_prompt = PromptTemplate.from_template(template)
+        formatted_prompt = stock_info_prompt.invoke({"user_input": user_input})
         llm = ChatOpenAI(api_key=os.getenv('API_KEY'),base_url=os.getenv('URL'))
         conn_string = f'user={os.environ.get("user")} password={os.environ.get("password")} host={os.environ.get("host")} port={os.environ.get("port")} dbname={os.environ.get("db")}'
-        formatted_prompt = stock_info_prompt.invoke({"user_input": user_input})
         response = llm.invoke(formatted_prompt)
         print(response)
         
         op = json.loads(response.content)
         stock_symbol = op['Stock Name'].upper()
         corp_action = op['Corporate Action']
-        
+
+
         if not stock_symbol.endswith(".NS"):
             stock_symbol += ".NS"
-            
+
         if corp_action.upper() not in ['SPLIT', 'BONUS', 'BUYBACK']:
             return jsonify({"error": "Please provide only the corporate action of 'SPLIT', 'BONUS', or 'BUYBACK' to proceed"}), 400
 
@@ -149,12 +218,21 @@ def gather_and_calculate_returns(user_input):
 
         
         returns_df = calculate_returns(filtered_df)
-      
-        return jsonify(returns_df.to_dict('records')), 200
+        
+        return returns_df,corp_action.upper()
 
     except Exception as e:
         print("Error: ", op['error'])
         return jsonify({"error": op['error']}), 400
+
+def analyze_reasoning(df,corp_action):
+    df_head = df.head().to_string()
+    formatted_prompt = generate_analysis_prompt(df_head, corp_action)
+    llm = ChatOpenAI(api_key=os.getenv('API_KEY'),base_url=os.getenv('URL'))
+    output = llm.invoke(formatted_prompt)
+
+    return output.content
+
 
 # Flask routes
 @app.route('/')
@@ -168,10 +246,12 @@ def analyze():
     data = request.get_json()
     user_input = data.get('query')
     print(user_input)
-    result = gather_and_calculate_returns(user_input)
-    return result
+    analysis_data,corp_action = gather_and_calculate_returns(user_input)
+    print(analysis_data)
+    reasoning_data = analyze_reasoning(analysis_data,corp_action)
+    print(reasoning_data)
 
-
+    return jsonify({"analysis": analysis_data.to_dict('records'), "reasoning": reasoning_data}),200
 
 
 
