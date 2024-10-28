@@ -163,14 +163,18 @@
         </div>
     </div>
 
-    <script>
+  <script>
+        document.getElementById("userInput").addEventListener("keypress", function(e) {
+            if (e.key === "Enter") sendMessage();
+        });
+
         function sendMessage() {
             const userInput = document.getElementById('userInput');
             const chatMessages = document.getElementById('chatMessages');
 
             if (userInput.value.trim() === '') return;
 
-            // Add user message to chat
+            // Display user message
             const userMessage = document.createElement('div');
             userMessage.className = 'message user-message';
             userMessage.textContent = userInput.value;
@@ -179,57 +183,63 @@
             // Clear input field
             userInput.value = '';
 
-            // AI response placeholder
+            // Display placeholder AI message
             const aiMessage = document.createElement('div');
             aiMessage.className = 'message ai-message';
             aiMessage.innerHTML = 'Analyzing your request...';
             chatMessages.appendChild(aiMessage);
 
+            // Fetch analysis and reasoning from server
             fetch('/analyze', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ query: userMessage.textContent }),
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: userMessage.textContent })
             })
             .then(response => {
                 if (!response.ok) {
-                    return response.json().then(data => {
-                        throw new Error(data.error || 'Unexpected server error');
-                    });
+                    return response.json().then(data => { throw new Error(data.error || 'Unexpected server error'); });
                 }
                 return response.json();
             })
             .then(data => {
-                aiMessage.innerHTML = formatStockResult(data);
+                const stockResult = formatStockResult(data);
+                const analysisReasoning = formatAnalysisWithReasoning(data);
+                aiMessage.innerHTML = stockResult + `<div class="markdown">${renderMarkdown(analysisReasoning)}</div>`;
             })
             .catch(error => {
-                aiMessage.innerHTML = error.message;
+                aiMessage.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
                 console.error('Error:', error);
             });
 
+            // Auto-scroll to latest message
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
-
         function formatStockResult(data) {
-            if (!Array.isArray(data)) {
-                return 'Error: Unexpected data format';
-            }
+            if (!Array.isArray(data.analysis)) return 'Error: Unexpected data format';
 
             let html = '<div class="stock-result">';
-            html += `<h3>${data[0].symbol} Analysis</h3><table>`;
-            html += '<tr><th>Announcement Date</th><th>Record Date</th><th>Record Date Return</th><th>3 Month Return</th><th>6 Month Return</th><th>1 Year Return</th><th>3 Year Return</th></tr>';
+            html += `<h3 style="margin-bottom: 15px;">${data.analysis[0].symbol} Analysis</h3>`;
+            html += '<table style="width:100%; border-collapse: collapse; margin-bottom: 30px;">';
+            html += '<tr style="background-color: #f2f2f2;">';
+            html += '<th style="padding: 8px; text-align: left; border: 1px solid #ddd;">Announcement Date</th>';
+            html += '<th style="padding: 8px; text-align: left; border: 1px solid #ddd;">Record Date</th>';
+            html += '<th style="padding: 8px; text-align: left; border: 1px solid #ddd;">Record Date Return</th>';
+            html += '<th style="padding: 8px; text-align: left; border: 1px solid #ddd;">3 Month Return</th>';
+            html += '<th style="padding: 8px; text-align: left; border: 1px solid #ddd;">6 Month Return</th>';
+            html += '<th style="padding: 8px; text-align: left; border: 1px solid #ddd;">1 Year Return</th>';
+            html += '<th style="padding: 8px; text-align: left; border: 1px solid #ddd;">3 Year Return</th>';
+            html += '</tr>';
 
-            data.forEach(record => {
+            data.analysis.forEach(record => {
                 html += '<tr>';
-                html += `<td>${record.announcement_date}</td>`;
-                html += `<td>${record.record_date}</td>`;
-                html += `<td>${record.record_date_return}</td>`;
-                html += `<td>${record['3m']}</td>`;
-                html += `<td>${record['6m']}</td>`;
-                html += `<td>${record['1y']}</td>`;
-                html += `<td>${record['3y']}</td>`;
+                html += `<td style="padding: 8px; text-align: left; border: 1px solid #ddd;">${record.announcement_date}</td>`;
+                html += `<td style="padding: 8px; text-align: left; border: 1px solid #ddd;">${record.record_date}</td>`;
+                html += `<td style="padding: 8px; text-align: left; border: 1px solid #ddd;">${record.record_date_return}</td>`;
+                html += `<td style="padding: 8px; text-align: left; border: 1px solid #ddd;">${record['3m']}</td>`;
+                html += `<td style="padding: 8px; text-align: left; border: 1px solid #ddd;">${record['6m']}</td>`;
+                html += `<td style="padding: 8px; text-align: left; border: 1px solid #ddd;">${record['1y']}</td>`;
+                html += `<td style="padding: 8px; text-align: left; border: 1px solid #ddd;">${record['3y']}</td>`;
                 html += '</tr>';
             });
 
@@ -237,12 +247,44 @@
             return html;
         }
 
-        // Allow sending message with Enter key
-        document.getElementById('userInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                sendMessage();
-            }
-        });
+        function formatAnalysisWithReasoning(data) {
+            let markdown = '## Analysis Reasoning\n\n';
+            
+            // Split the reasoning into paragraphs
+            const paragraphs = data.reasoning.split('\n\n');
+            
+            paragraphs.forEach(paragraph => {
+                markdown += `${paragraph}\n\n`;
+            });
+            
+
+            return markdown;
+        }
+
+        function renderMarkdown(markdown) {
+            // This is a simple Markdown renderer. For a full-featured renderer, consider using a library like marked.js
+            return markdown
+                // Headers
+                .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+                .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+                .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+                // Bold
+                .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
+                // Italic
+                .replace(/\*(.*)\*/gim, '<em>$1</em>')
+                // Code
+                .replace(/`(.*)`/gim, '<code>$1</code>')
+                // Lists
+                .replace(/^\s*\n\*/gm, '<ul>\n*')
+                .replace(/^(\*.+)\s*\n([^\*])/gm, '$1\n</ul>\n\n$2')
+                .replace(/^\*(.+)/gm, '<li>$1</li>')
+                // Paragraphs
+                .replace(/^\s*(\n)?(.+)/gm, function(m) {
+                    return /\<(\/)?(h\d|ul|ol|li|table|code|blockquote)/.test(m) ? m : '<p>'+m+'</p>';
+                })
+                // Line breaks
+                .replace(/^\s*\n/gm, '<br />\n');
+        }
     </script>
 </body>
 </html>
