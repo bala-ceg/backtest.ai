@@ -179,7 +179,6 @@ def gather_and_calculate_returns(user_input):
         stock_symbol = op['Stock Name'].upper()
         corp_action = op['Corporate Action']
 
-
         if not stock_symbol.endswith(".NS"):
             stock_symbol += ".NS"
 
@@ -203,7 +202,6 @@ def gather_and_calculate_returns(user_input):
                 record_date, 
                 announcement_date;
         """
-        
         conn = psycopg2.connect(conn_string)
         filtered_df = pd.read_sql_query(corpaction_query, conn, params=(corp_action.lower(), stock_symbol))
 
@@ -212,9 +210,6 @@ def gather_and_calculate_returns(user_input):
             
         filtered_df['record_date'] = pd.to_datetime(filtered_df['record_date'])
         filtered_df['announcement_date'] = pd.to_datetime(filtered_df['announcement_date'])
-
-
-        
         returns_df = calculate_returns(filtered_df)
         
         return returns_df,corp_action.upper()
@@ -228,7 +223,6 @@ def analyze_reasoning(df,corp_action):
     formatted_prompt = generate_analysis_prompt(df_head, corp_action)
     llm = ChatOpenAI(api_key=os.getenv('API_KEY'),base_url=os.getenv('URL'))
     output = llm.invoke(formatted_prompt)
-
     return output.content
 
 
@@ -250,7 +244,6 @@ def analyze():
         return jsonify({"error": analysis_data }), 400
     reasoning_data = analyze_reasoning(analysis_data,corp_action)
     print(reasoning_data)
-
     return jsonify({"analysis": analysis_data.to_dict('records'), "reasoning": reasoning_data}),200
 
 
