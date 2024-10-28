@@ -13,7 +13,6 @@ import psycopg2
 
 app = Flask(__name__)
 
-# Initialize LangChain components
 template = """You are tasked with gathering information for a stock analysis. Please provide the following details:
 
 1. **Stock Name**:
@@ -26,14 +25,6 @@ Current Input:
 
 Return the Response in JSON Format"""
 
-stock_info_prompt = PromptTemplate.from_template(template)
-
-llm = ChatOpenAI(
-    api_key=os.getenv('API_KEY'),
-    base_url=os.getenv('URL')
-)
-
-conn_string = f'user={os.environ.get("user")} password={os.environ.get("password")} host={os.environ.get("host")} port={os.environ.get("port")} dbname={os.environ.get("db")}'
 
 
 def is_valid_stock(symbol):
@@ -112,6 +103,9 @@ def calculate_returns(df):
 def gather_and_calculate_returns(user_input):
     print(user_input)
     try:
+        stock_info_prompt = PromptTemplate.from_template(template)
+        llm = ChatOpenAI(api_key=os.getenv('API_KEY'),base_url=os.getenv('URL'))
+        conn_string = f'user={os.environ.get("user")} password={os.environ.get("password")} host={os.environ.get("host")} port={os.environ.get("port")} dbname={os.environ.get("db")}'
         formatted_prompt = stock_info_prompt.invoke({"user_input": user_input})
         response = llm.invoke(formatted_prompt)
         print(response)
