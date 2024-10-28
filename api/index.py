@@ -184,10 +184,10 @@ def gather_and_calculate_returns(user_input):
             stock_symbol += ".NS"
 
         if corp_action.upper() not in ['SPLIT', 'BONUS', 'BUYBACK']:
-            return jsonify({"error": "Please provide only the corporate action of 'SPLIT', 'BONUS', or 'BUYBACK' to proceed"}), 400
+            return f"Please provide only the corporate action of 'SPLIT', 'BONUS', or 'BUYBACK' to proceed", None
 
         if not is_valid_stock(stock_symbol):
-            return jsonify({"error": f"The stock symbol {stock_symbol} is not valid or not listed on a recognized exchange."}), 400
+            return f"The stock symbol {stock_symbol} is not valid or not listed on a recognized exchange.", None
 
         corpaction_query = """
             SELECT 
@@ -207,11 +207,12 @@ def gather_and_calculate_returns(user_input):
         conn = psycopg2.connect(conn_string)
         filtered_df = pd.read_sql_query(corpaction_query, conn, params=(corp_action.lower(), stock_symbol))
 
-        if not filtered_df.empty:
-            filtered_df['record_date'] = pd.to_datetime(filtered_df['record_date'])
-            filtered_df['announcement_date'] = pd.to_datetime(filtered_df['announcement_date'])
-        else:
-            return jsonify({"error": f"No {corp_action} corporate announcements found for {stock_symbol}."}), 400
+        if filtered_df.empty:
+            return f"No {corp_action} corporate announcements found for {stock_symbol}.", None
+            
+        filtered_df['record_date'] = pd.to_datetime(filtered_df['record_date'])
+        filtered_df['announcement_date'] = pd.to_datetime(filtered_df['announcement_date'])
+
 
         
         returns_df = calculate_returns(filtered_df)
@@ -244,7 +245,9 @@ def analyze():
     user_input = data.get('query')
     print(user_input)
     analysis_data,corp_action = gather_and_calculate_returns(user_input)
-    print(analysis_data)
+    print(analysis_data,corp_action)
+    if corp_action is None:
+        return jsonify({"error": analysis_data }), 400
     reasoning_data = analyze_reasoning(analysis_data,corp_action)
     print(reasoning_data)
 
