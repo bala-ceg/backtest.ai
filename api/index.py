@@ -1,6 +1,3 @@
-llm = ChatOpenAI(api_key=os.getenv('API_KEY'),base_url=os.getenv('URL'))
-conn_string = f'user={os.environ.get("user")} password={os.environ.get("password")} host={os.environ.get("host")} port={os.environ.get("port")} dbname={os.environ.get("db")}'
-  
 from flask import Flask, render_template, request, jsonify
 from datetime import timedelta, datetime
 import yfinance as yf
