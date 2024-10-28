@@ -2,13 +2,12 @@ from flask import Flask, render_template, request, jsonify
 from datetime import timedelta, datetime
 import yfinance as yf
 import pandas as pd
-import requests
 import json
 from langchain.prompts import PromptTemplate
-from langchain.chat_models import ChatOpenAI
+from langchain_openai import ChatOpenAI
 import urllib.parse
 import os
-
+import psycopg2
 
 
 
@@ -28,26 +27,14 @@ Current Input:
 Return the Response in JSON Format"""
 
 stock_info_prompt = PromptTemplate.from_template(template)
+
 llm = ChatOpenAI(
     api_key=os.getenv('API_KEY'),
     base_url=os.getenv('URL')
 )
 
-# Helper functions from bonus_backtest.py
-def nsefetch(payload):
-    try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
-        }
-        s = requests.Session()
-        s.get("http://nseindia.com", headers=headers)
-        response = s.get(payload, headers=headers)
-        response.raise_for_status()
-        output = response.json()
-        return output
-    except requests.exceptions.RequestException as e:
-        print(f"An error occurred: {e}")
-        return None
+conn_string = f'user={os.environ.get("user")} password={os.environ.get("password")} host={os.environ.get("host")} port={os.environ.get("port")} dbname={os.environ.get("db")}'
+
 
 def is_valid_stock(symbol):
     try:
@@ -123,24 +110,54 @@ def calculate_returns(df):
     return pd.DataFrame(results)
 
 def gather_and_calculate_returns(user_input):
+    print(user_input)
     try:
         formatted_prompt = stock_info_prompt.invoke({"user_input": user_input})
         response = llm.invoke(formatted_prompt)
+        print(response)
         
         op = json.loads(response.content)
         stock_symbol = op['Stock Name'].upper()
         corp_action = op['Corporate Action']
 
-        filtered_df = pd.DataFrame({
-            'record_date': ['2019-03-07', '2017-06-14', '2010-06-16'],
-            'announcement_date': ['2019-01-18', '2017-04-25', '2010-04-23'],
-            'symbol': ['WIPRO.NS', 'WIPRO.NS', 'WIPRO.NS']
-        })
+        if corp_action.upper() not in ['SPLIT', 'BONUS', 'BUYBACK']:
+            return jsonify({"error": "Please provide only the corporate action of 'SPLIT', 'BONUS', or 'BUYBACK' to proceed"}), 400
+
+        if not is_valid_stock(stock_symbol):
+            return jsonify({"error": f"The stock symbol {stock_symbol} is not valid or not listed on a recognized exchange."}), 400
+
+        corpaction_query = """
+            SELECT 
+                symbol, 
+                record_date, 
+                announcement_date, 
+                action 
+            FROM 
+                nse_corpactions
+            WHERE 
+                action = %s AND symbol = %s
+            ORDER BY 
+                record_date, 
+                announcement_date;
+        """
+        
+        conn = psycopg2.connect(conn_string)
+        filtered_df = pd.read_sql_query(corpaction_query, conn, params=(corp_action.lower(), stock_symbol))
+
+        if not filtered_df.empty:
+            filtered_df['record_date'] = pd.to_datetime(filtered_df['record_date'])
+            filtered_df['announcement_date'] = pd.to_datetime(filtered_df['announcement_date'])
+        else:
+            return jsonify({"error": f"No {corp_action} corporate announcements found for {stock_symbol}."}), 400
+
+        
         returns_df = calculate_returns(filtered_df)
-        return returns_df.to_dict('records')
+      
+        return jsonify(returns_df.to_dict('records')), 200
 
     except Exception as e:
-        return {"error": str(e)}
+        print("Error: ", op['error'])
+        return jsonify({"error": op['error']}), 400
 
 # Flask routes
 @app.route('/')
@@ -149,11 +166,17 @@ def home():
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
-    user_input = request.json.get('message')
+    print(request.data)  # Log raw data for debugging
+    print(request.get_json())  
+    data = request.get_json()
+    user_input = data.get('query')
+    print(user_input)
     result = gather_and_calculate_returns(user_input)
-    return jsonify(result)
+    return result
 
 
-@app.route('/about')
-def index():
-    return render_template('chat.html')
+
+
+
+
+
