@@ -36,11 +36,7 @@ rationales = {
 
 stock_info_prompt = PromptTemplate.from_template(stockanalysis_template)
 
-llm = ChatOpenAI(
-    api_key='mdb_1P4vPquIeFC4M4isa8FbIvgavv2qaznt5LoNL4XSPzO9',
-    base_url='https://llm.mdb.ai'
-)
-conn_string ='user=postgres.tbyjdbudjrlxigaobinu password=8GK%S*G!qpfQa!y host=aws-0-ap-south-1.pooler.supabase.com port=6543 dbname=postgres'
+
 
 
 def generate_analysis_prompt(df_head: str, corporate_action: str) -> str:
