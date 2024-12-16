@@ -1,4 +1,4 @@
-#backtest.ai
+# backtest.ai
 
 ## Inspiration
 Everyone loves money, and many seek to grow their wealth through capital markets, whether for short or long durations. However, identifying the right stock for short-term or long-term gains can be risky and cumbersome. In Peter Lynch's *One Up on Wall Street*, he emphasizes the importance of investing in companies that consistently buy back their shares. Inspired by this, I envisioned a tool that calculates the returns from buybacks, bonuses, and stock splits, providing long-term and short-term insights along with LLM-based reasoning for trade and investment ideas.
